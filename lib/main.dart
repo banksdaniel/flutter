@@ -1,80 +1,55 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:globo_quest/routes/app_router.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:globoapp/screens/auth/login_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:globo_quest/services/auth_service.dart';
-import 'package:globo_quest/services/destination_service.dart';
-import 'package:globo_quest/services/places_service.dart';
-import 'package:globo_quest/view_models/destination_view_model.dart';
-import 'package:globo_quest/view_models/login_view_model.dart';
-import 'package:provider/provider.dart';
-import 'firebase_options.dart';
+import 'package:globoapp/firebase_options.dart';
+import 'package:globoapp/screens/home/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
-  await dotenv.load();
-
-  runApp(const GloboQuest());
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  runApp(const GloboApp());
 }
 
-class GloboQuest extends StatelessWidget {
-  const GloboQuest({super.key});
+class GloboApp extends StatelessWidget {
+  const GloboApp({super.key});
+
+  Stream<User?> _getCurrentUser() {
+    final auth = FirebaseAuth.instance;
+    return auth.userChanges();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthService()),
-        Provider<DestinationService>(create: (_) => DestinationService()),
-        Provider<PlacesService>(create: (_) => PlacesService()),
-        ChangeNotifierProvider(
-          create: (context) => LoginViewModel(
-            authService: Provider.of<AuthService>(context, listen: false),
+    return GestureDetector(
+      onTap: () {
+        final currentFocus = FocusScope.of(context);
+        if (!currentFocus.hasPrimaryFocus) {
+          FocusManager.instance.primaryFocus?.unfocus();
+        }
+      },
+      child: MaterialApp(
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.deepPurple,
+            brightness: Brightness.light,
           ),
+          useMaterial3: true,
         ),
-        ChangeNotifierProvider(
-          create: (context) => DestinationViewModel(
-            placesService: Provider.of<PlacesService>(context, listen: false),
+        darkTheme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.deepPurple,
+            brightness: Brightness.dark,
           ),
+          useMaterial3: true,
         ),
-      ],
-      child: GestureDetector(
-        onTap: () {
-          final currentFocus = FocusScope.of(context);
-          if (!currentFocus.hasPrimaryFocus) {
-            FocusManager.instance.primaryFocus!.unfocus();
-          }
-        },
-        child: MaterialApp.router(
-          title: 'GloboQuest',
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF0077B5),
-              brightness: Brightness.light,
-            ),
-            useMaterial3: true,
-          ),
-          darkTheme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF0077B5),
-              brightness: Brightness.dark,
-            ),
-            useMaterial3: true,
-          ),
-          themeMode: ThemeMode.system,
-          locale: const Locale('pt', 'BR'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          scrollBehavior: const ScrollBehavior().copyWith(
-            physics: const BouncingScrollPhysics(),
-          ),
-          routerConfig: router,
+        themeMode: ThemeMode.dark,
+        home: StreamBuilder(
+          stream: _getCurrentUser(),
+          builder: (context, snapshot) {
+            if (snapshot.data == null) return const LoginScreen();
+            return const HomeScreen();
+          },
         ),
       ),
     );
